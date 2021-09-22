@@ -1,18 +1,11 @@
 import telnetlib
 import time
-import re
-from binascii import hexlify
-
-
-import operator
-from functools import reduce
 
 # Heavily referencing
 # https://swarm.space/wp-content/uploads/2021/07/Swarm-Tile-Product-Manual.pdf
 # https://swarm.space/wp-content/uploads/2021/08/Swarm-Eval-Kit-Quickstart-Guide.pdf
 
 SWARM_EVAL_HOST = "192.168.30.30"
-
 
 
 def relaxed_read(_tn, seconds=5):
@@ -40,6 +33,7 @@ def expect_okay(_data):
 
     return False
 
+
 def checksum(s):
     cs = 0
     h = s.encode()
@@ -47,7 +41,6 @@ def checksum(s):
         cs = cs ^ c
     h = h + b'*%02X\n'%cs
     return h
-
 
 
 if __name__ == "__main__":
