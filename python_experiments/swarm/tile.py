@@ -38,6 +38,9 @@ class TileSerial:
     class NoExpectedResponse(Exception):
         pass
 
+    class MessageSendException(Exception):
+        pass
+
     def connect(self, port):
         self.connection = serial.Serial(port, baudrate=115200)
         self.connection.timeout = 2
@@ -53,6 +56,14 @@ class TileSerial:
 
             if (datetime.datetime.now() - start).total_seconds() > seconds:
                 break
+
+    def send_swarm_message(self, message, application_id='4337'):
+        r = self.write_read('$TD "' + str(message) + '"', expect='$TD OK')
+        if '$TD OK' in r:
+            msg_id = r[7:-4]
+            return msg_id
+        else:
+            raise self.MessageSendException
 
     def read_expectantly(self, expect):
         # Reads until we receive a full message containing the string passed in `expect`
