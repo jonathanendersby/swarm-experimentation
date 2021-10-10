@@ -16,13 +16,24 @@ class TileSerial:
     def set_logging(self, _bool):
         self.logging = _bool
 
-    def log_write(self, message, direction):
-        if self.logging:
-            if self.log_file is None:
-                self.log_file = open('tile.log', 'a')
+    def log_write(self, message, annotation):
+        try:
+            check = message.decode('utf-8')
+        except (UnicodeDecodeError, AttributeError):
+            check = str(message)
 
-            self.log_file.write(datetime.datetime.now().isoformat() + ' ' + str(direction)*3 + ' ' + message.decode('utf-8'))
-            self.log_file.flush()
+        if check.strip() != '':
+            if self.logging:
+                if self.log_file is None:
+                    self.log_file = open('tile.log', 'a')
+
+                try:
+                    m = message.decode('utf-8')
+                except (UnicodeDecodeError, AttributeError):
+                    m = str(message) + '\n'
+
+                self.log_file.write(datetime.datetime.now().isoformat() + ' ' + str(annotation) * 3 + ' ' + m)
+                self.log_file.flush()
 
     class NoExpectedResponse(Exception):
         pass
@@ -30,13 +41,16 @@ class TileSerial:
     def connect(self, port):
         self.connection = serial.Serial(port, baudrate=115200)
         self.connection.timeout = 2
+        self.log_write('Tile Serial Connected on' + port, annotation='#')
 
     def read_monitor(self, seconds):
         # Helpful for printing out the output for a few seconds
         start = datetime.datetime.now()
         while True:
-            _lines = self.connection.readall()
-            print(_lines)
+            r = self.connection.read_until()
+            self.log_write(r, annotation='<')
+            _lines = [r]
+
             if (datetime.datetime.now() - start).total_seconds() > seconds:
                 break
 
@@ -45,27 +59,24 @@ class TileSerial:
 
         # Optimistically try a cheeky read_until
         r = self.connection.read_until()
-        self.log_write(r, direction='<')
+        self.log_write(r, annotation='<')
         _lines = [r]
 
         if lines_contain(_lines, expect):
             # We got what we wanted, let's return
-            # print('>> Received expected on first try.')
             return line_containing(_lines, expect)
 
         else:
-            # print('We did not get our expected response in the first returned message...')
             # Okay, we didn't get what we expected from the first line, so let's see if
             # there's more in the buffer
 
             if self.connection.in_waiting:
-                # print('Buffer was not empty...')
                 # Yes, there's more in the buffer, lets read it all and see if any of that matches.
                 while self.connection.in_waiting:
                     # We have to do this in case there's a ton of messages that need to be received.
                     # Can't just assume 3 tries will do it (see below)
                     r = self.connection.read_until()
-                    self.log_write(r, direction='<')
+                    self.log_write(r, annotation='<')
                     _lines.append(r)
 
             if lines_contain(_lines, expect):
@@ -73,10 +84,10 @@ class TileSerial:
                 return line_containing(_lines, expect)
 
             # The buffer is empty but we still haven't received what we wanted, lets wait 200ms
-            # print('Trying read_until() a few times')
-            for i in range(3):
+            for i in range(1, 3):
+                self.log_write('Read Retry' + ' #' + str(i), annotation='#')
                 r = self.connection.read_until()
-                self.log_write(r, direction='<')
+                self.log_write(r, annotation='<')
                 _lines.append(r)
                 if lines_contain(_lines, expect):
                     break
@@ -94,7 +105,7 @@ class TileSerial:
 
         message = checksum(message)
         self.connection.write(message)
-        self.log_write(message, direction='>')
+        self.log_write(message, annotation='>')
         if expect:
             r = self.read_expectantly(expect)
         else:
