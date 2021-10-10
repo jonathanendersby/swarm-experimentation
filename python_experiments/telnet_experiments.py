@@ -1,11 +1,11 @@
 import telnetlib
 import time
 
+import settings
+
 # Heavily referencing
 # https://swarm.space/wp-content/uploads/2021/07/Swarm-Tile-Product-Manual.pdf
 # https://swarm.space/wp-content/uploads/2021/08/Swarm-Eval-Kit-Quickstart-Guide.pdf
-
-SWARM_EVAL_HOST = "192.168.146.30"
 
 
 GNSS_FIX_TYPES = {
@@ -24,6 +24,7 @@ def relaxed_read(_tn, seconds=5):
     time.sleep(0.1)
     out = _tn.read_until(match=b'EXIT_NOT_GOING_TO_HAPPEN', timeout=seconds).decode('ascii')
     time.sleep(0.1)
+    print(out)
     return out
 
 
@@ -101,8 +102,8 @@ def parse_state(_data, _state=None):
 
 if __name__ == "__main__":
     try:
-        tn = telnetlib.Telnet(SWARM_EVAL_HOST, timeout=10)
-        print('Connected to', SWARM_EVAL_HOST)
+        tn = telnetlib.Telnet(settings.SWARM_EVAL_HOST, timeout=10)
+        print('Connected to', settings.SWARM_EVAL_HOST)
 
         # Get some data to see if we have GPS / RSSI etc.
         data = relaxed_read(tn)
@@ -130,6 +131,7 @@ if __name__ == "__main__":
 
     finally:
         print('Disconnecting...')
+        time.sleep(0.1)
         tn.close()
         time.sleep(0.1)
 
